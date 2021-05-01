@@ -10,9 +10,7 @@ Install
 2. In root directory run: python3 -m venv venv
     1. or just: python -m venv venv
 3. In the root directory run: `venv\Scripts\activate`
-4. Within the activated env run: 
-    1. pip install Flask
-    2. pip install -U flask-cors
+4. Within the activated env run: `pip install -r requirements.txt`
 5. Run: `$env:FLASK_APP=app.py`
 6. To quit the activated env run: `deactivate`
 ```
