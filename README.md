@@ -4,10 +4,25 @@ How to Run
 Windows
 ---
 
-1. https://flask.palletsprojects.com/en/1.1.x/installation/#installation follow this first lol
+Install
+```
+1. install python
+2. In root directory run: python3 -m venv venv
+    1. or just: python -m venv venv
+3. In the root directory run: `venv\Scripts\activate`
+4. Within the activated env run: 
+    1. pip install Flask
+    2. pip install -U flask-cors
+5. Run: `$env:FLASK_APP=app.py`
+6. To quit the activated env run: `deactivate`
+```
+
+Run
+```
 1. In the root directory run: `venv\Scripts\activate`
-1. You should see something like (venv)
-1. If this is your first time setting up the project do: 
+2. You should see something like (venv)
+3. If this is your first time setting up the project do: 
     1. `$env:FLASK_APP=app.py`
-    1. `$env:FLASK_RUN_PORT=3030`
-1. To run do: `flask run`
+    2. `$env:FLASK_RUN_PORT=3030`
+4. To run do: `flask run`
+```
