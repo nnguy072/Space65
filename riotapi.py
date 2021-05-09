@@ -115,6 +115,7 @@ class RiotApi:
     # currently placeholder
     def calculate_percentage_of_winning(self, summoner_name, live_match, previous_match_list):
         return "0"
+
     
 
     # will return whether you will win or not (details depend on what model we use)
@@ -124,5 +125,5 @@ class RiotApi:
         #live_match = self.get_live_match(summoner)
         #current_champion_id = live_match.get_champion_id_by_summoner_name(summoner_name)
 
-        previous_matches = self.get_list_of_matches(summoner)
-        return self.calculate_percentage_of_winning(summoner_name, previous_matches[0], previous_matches, begin_index = 0, end_index = 10)
+        previous_matches = self.get_list_of_matches(summoner, begin_index = 0, end_index = 10)
+        return self.calculate_percentage_of_winning(summoner_name, previous_matches[0], previous_matches)
