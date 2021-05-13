@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, Response, request, jsonify
 from flask_cors import CORS, cross_origin
 
 import sys
@@ -16,10 +16,12 @@ riot_api = RiotApi(app.config["RIOT_API_KEY"])
 def hello_world():
     return 'Hello, World!'
 
-@app.route('/test', methods=['GET'])
+@app.route('/update', methods=['POST'])
 @cross_origin()
 def hello_world_test():
-    return riot_api.champion_id_mapping
+    summoner_name = request.args.get("summonerName")
+    riot_api.update_list_of_matches(summoner_name, begin_index = 201, end_index = 250)
+    return {}, 200
 
 @app.route('/my_summoner', methods=['GET'])
 @cross_origin()

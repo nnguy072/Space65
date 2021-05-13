@@ -81,8 +81,7 @@ class Match:
     def get_dict(self, summoner_name):
         result_dict = {}
         teams_dict = self.get_ally_and_enemy_team_list(summoner_name)
-        result_dict["match_id"] = self.match_id
-        result_dict["winner"] = "ally" if self.is_player_on_winning_team(summoner_name) else "enemy"
+        result_dict["winner"] = 1 if self.is_player_on_winning_team(summoner_name) else 0
         result_dict["ally_summoner"] = summoner_name
         result_dict["ally_summoner_champion"] = self.get_champion_name_by_summoner_name(summoner_name)
 
