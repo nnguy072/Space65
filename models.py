@@ -58,6 +58,9 @@ class Match:
         self.red_team = red_team
         self.winner = winner
 
+    def is_player_in_match(self, summoner_name):
+        return self.blue_team.is_player_on_team(summoner_name) or self.red_team.is_player_on_team(summoner_name)
+
     def is_player_on_winning_team(self, summoner_name):
         if self.winner == Team.BLUE_TEAM_NAME:
             return self.blue_team.is_player_on_team(summoner_name)

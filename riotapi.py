@@ -7,6 +7,7 @@ from sklearn import metrics
 import sys
 import json
 import time
+import itertools
 import pandas as pd
 import category_encoders as ce
 
@@ -138,6 +139,31 @@ class RiotApi:
 
     # currently placeholder
     def calculate_percentage_of_winning(self, summoner_name):
+        previous_matches_list = self.read_list_of_matches_from_file()
+        processed_matches_list = [self.process_match_info(match) for match in previous_matches_list["matches"]]
+        
+        # get only matches where player is in the game
+        filtered_matches_list = [match for match in processed_matches_list if match.is_player_in_match(summoner_name)]
+        data = pd.DataFrame([match.get_dict(summoner_name) for match in filtered_matches_list])
+        list_of_dicts = []
+        for row in data.itertuples():
+            values = row[4:]
+
+            ally_champion_permutations = list(itertools.permutations(values, 4))
+            for permutation in ally_champion_permutations:
+                result_dict = {}
+                result_dict["winner"] = row[1]
+                result_dict["ally_summoner"] = row[2]
+                result_dict["ally_summoner_champion"] = row[3]
+                result_dict["ally_1_champion"] = permutation[0]
+                result_dict["ally_2_champion"] = permutation[1]
+                result_dict["ally_3_champion"] = permutation[2]
+                result_dict["ally_4_champion"] = permutation[3]
+                list_of_dicts.append(result_dict)
+
+        result = pd.DataFrame(list_of_dicts)
+        print(result)
+
         return "0"
 
     # will return whether you will win or not (details depend on what model we use)

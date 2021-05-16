@@ -20,7 +20,7 @@ def hello_world():
 @cross_origin()
 def hello_world_test():
     summoner_name = request.args.get("summonerName")
-    riot_api.update_list_of_matches(summoner_name, begin_index = 201, end_index = 250)
+    riot_api.update_list_of_matches(summoner_name, begin_index = 0, end_index = 50)
     return {}, 200
 
 @app.route('/my_summoner', methods=['GET'])
