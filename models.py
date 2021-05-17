@@ -1,12 +1,15 @@
 class Player:
 
-    def __init__(self, summoner_name, champion_id, champion_name, kills=0, deaths=0, assists=0):
+    def __init__(self, summoner_name, champion_id, champion_name, kills=0, deaths=0, assists=0, spell1Id=0, spell2Id=0, profileIcon=0):
         self.summoner_name = summoner_name
         self.champion_id = champion_id
         self.champion_name = champion_name
         self.kills = kills
         self.deaths = deaths
         self.assists = assists
+        self.spell1Id = spell1Id
+        self.spell2Id = spell2Id
+        self.profileIcon = profileIcon
 
 class Team: 
     MAX_TEAM_SIZE = 5
@@ -93,5 +96,24 @@ class Match:
             if (player.summoner_name != summoner_name):
                 result_dict["ally_" + str(index) + "_champion"] = player.champion_name
                 index = index + 1
+
+        return result_dict
+
+    def get_dict_v2(self, summoner_name):
+        result_dict = {}
+        teams_dict = self.get_ally_and_enemy_team_list(summoner_name)
+        result_dict["summoner"] = summoner_name
+
+        allies = []
+        enemies = []
+
+        for player in teams_dict["ally_team"].players:
+            allies.append({"champion": player.champion_name, "summoner": player.summoner_name})
+
+        for player in teams_dict["enemy_team"].players:
+            enemies.append({"champion": player.champion_name, "summoner": player.summoner_name})
+
+        result_dict["allies"] = allies
+        result_dict["enemies"] = enemies
 
         return result_dict

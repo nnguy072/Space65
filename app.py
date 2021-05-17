@@ -23,7 +23,13 @@ def hello_world_test():
     riot_api.update_list_of_matches(summoner_name, begin_index = 0, end_index = 50)
     return {}, 200
 
-@app.route('/my_summoner', methods=['GET'])
+@app.route('/live-match', methods=['GET'])
+@cross_origin()
+def get_live_match():
+    summoner_name = request.args.get("summonerName")
+    return riot_api.get_live_match_api(summoner_name)
+
+@app.route('/my-summoner', methods=['GET'])
 @cross_origin()
 def get_win_prediction():
     summoner_name = request.args.get("summonerName")
