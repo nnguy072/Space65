@@ -1,29 +1,32 @@
-from flask import Flask, request, jsonify
+from flask import Flask, Response, request, jsonify
 from flask_cors import CORS, cross_origin
-from riotwatcher import LolWatcher, ApiError
+
+import sys
+from riotapi import RiotApi
 
 app = Flask(__name__, instance_relative_config=True)
-#app.config.from_object('config')
 app.config.from_pyfile('config.py')
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
-lol_watcher = LolWatcher(app.config["RIOT_API_KEY"])
-my_region = 'na1'
+riot_api = RiotApi(app.config["RIOT_API_KEY"])
 
 @app.route('/')
 @cross_origin()
 def hello_world():
-  return 'Hello, World!'
+    return 'Hello, World!'
 
-@app.route('/test', methods=['POST'])
+@app.route('/update', methods=['POST'])
 @cross_origin()
 def hello_world_test():
-  return jsonify(request.json)
+    summoner_name = request.args.get("summonerName")
+    riot_api.update_list_of_matches(summoner_name, begin_index = 201, end_index = 250)
+    return {}, 200
 
 @app.route('/my_summoner', methods=['GET'])
 @cross_origin()
-def get_summoner_info():
-  summoner_name = request.args.get("summonerName")
-  me = lol_watcher.summoner.by_name(my_region, summoner_name)
-  return me
+def get_win_prediction():
+    summoner_name = request.args.get("summonerName")
+    return riot_api.get_win_prediction(summoner_name)
+    
+
