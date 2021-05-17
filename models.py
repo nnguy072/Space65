@@ -95,3 +95,22 @@ class Match:
                 index = index + 1
 
         return result_dict
+
+    def get_dict_v2(self, summoner_name):
+        result_dict = {}
+        teams_dict = self.get_ally_and_enemy_team_list(summoner_name)
+        result_dict["summoner"] = summoner_name
+
+        allies = []
+        enemies = []
+
+        for player in teams_dict["ally_team"].players:
+            allies.append({"champion": player.champion_name, "summoner": player.summoner_name})
+
+        for player in teams_dict["enemy_team"].players:
+            enemies.append({"champion": player.champion_name, "summoner": player.summoner_name})
+
+        result_dict["allies"] = allies
+        result_dict["enemies"] = enemies
+
+        return result_dict

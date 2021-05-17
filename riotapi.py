@@ -108,23 +108,27 @@ class RiotApi:
         # construct new dictionary with previous matches + new matches
         self.write_list_of_matches_from_file(latest_matches)
 
-    # return Match object from models.py but with no winner value as game isn't finished yet
-    # info about json object here: https://developer.riotgames.com/apis#spectator-v4/GET_getCurrentGameInfoBySummoner
+    # return live match json object from riot api: https://developer.riotgames.com/apis#spectator-v4/GET_getCurrentGameInfoBySummoner
     def get_live_match(self, summoner_name):
         summoner = self.get_summoner_info(summoner_name)  
         match = self.lol_watcher.spectator.by_summoner(RiotApi.MY_REGION, summoner["id"])
 
+        return match
+
+    # return Match object from models.py but with no winner value as game isn't finished yet
+    # match param is json object of live match
+    def process_live_match(self, match):
         # currently on care about aram games that aren't custom games
         # custom games won't have a gameQueueConfigId field
-        if match["gameQueueConfigId"] is None or match["gameQueueConfigId"] != RiotApi.ARAM_QUEUE_ID:
-            return None
+        # if match["gameQueueConfigId"] is None or match["gameQueueConfigId"] != RiotApi.ARAM_QUEUE_ID:
+        #     return None
         
         # create team objects
         blue_team = Team(Team.BLUE_TEAM_ID)
         red_team = Team(Team.RED_TEAM_ID)
 
         for index, item in enumerate(match["participants"]):
-            summoner_name = match["participantIdentities"][index]["player"]["summonerName"]
+            summoner_name = item["summonerName"]
             champion_id = item["championId"]
             champion_name = self.get_champion_name_by_id(champion_id)
             team_id = item["teamId"]
@@ -137,6 +141,10 @@ class RiotApi:
 
         return_match = Match(match["gameId"], blue_team, red_team, Match.LIVE_GAME_WINNER)
         return return_match
+
+    def get_live_match_api(self, summoner_name):
+        processed_live_match = self.process_live_match(self.get_live_match(summoner_name))
+        return processed_live_match.get_dict_v2(summoner_name)
 
     # currently placeholder
     def calculate_percentage_of_winning(self, summoner_name):
