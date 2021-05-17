@@ -3,10 +3,12 @@ from models import Player, Team, Match
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
+from catboost import CatBoostClassifier
 
 import sys
 import json
 import time
+import itertools
 import pandas as pd
 import category_encoders as ce
 
@@ -138,7 +140,44 @@ class RiotApi:
 
     # currently placeholder
     def calculate_percentage_of_winning(self, summoner_name):
-        return "0"
+        previous_matches_list = self.read_list_of_matches_from_file()
+        processed_matches_list = [self.process_match_info(match) for match in previous_matches_list["matches"]]
+        
+        # get only matches where player is in the game
+        filtered_matches_list = [match for match in processed_matches_list if match.is_player_in_match(summoner_name)]
+        data = pd.DataFrame([match.get_dict(summoner_name) for match in filtered_matches_list])
+        list_of_dicts = []
+        for row in data.itertuples():
+            values = row[4:]
+
+            ally_champion_permutations = list(itertools.permutations(values, 4))
+            for permutation in ally_champion_permutations:
+                result_dict = {}
+                result_dict["winner"] = row[1]
+                result_dict["ally_summoner"] = row[2]
+                result_dict["ally_summoner_champion"] = row[3]
+                result_dict["ally_1_champion"] = permutation[0]
+                result_dict["ally_2_champion"] = permutation[1]
+                result_dict["ally_3_champion"] = permutation[2]
+                result_dict["ally_4_champion"] = permutation[3]
+                list_of_dicts.append(result_dict)
+
+        data = pd.DataFrame(list_of_dicts)
+
+        feature_columns = [col for col in data.columns if "ally" in col if "summoner" not in col]
+        label_columns = ["winner"]
+
+        x = data[feature_columns]
+        y = data[label_columns]
+
+        x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.8)
+
+        # This takes a while to train the mode. Around ~
+        model=CatBoostClassifier(iterations=1000, eval_metric="AUC", loss_function="Logloss", task_type="GPU", allow_writing_files=False)
+        model.fit(x_train, y_train,cat_features=feature_columns, eval_set=(x_test, y_test), verbose = 200, use_best_model=True)
+
+        y_pred = model.predict(x_test)
+        return {"accuracy": metrics.accuracy_score(y_test, y_pred)}
 
     # will return whether you will win or not (details depend on what model we use)
     def get_win_prediction(self, summoner_name):
