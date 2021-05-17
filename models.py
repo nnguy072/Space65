@@ -1,12 +1,15 @@
 class Player:
 
-    def __init__(self, summoner_name, champion_id, champion_name, kills=0, deaths=0, assists=0):
+    def __init__(self, summoner_name, champion_id, champion_name, kills=0, deaths=0, assists=0, spell1Id=0, spell2Id=0, profileIcon=0):
         self.summoner_name = summoner_name
         self.champion_id = champion_id
         self.champion_name = champion_name
         self.kills = kills
         self.deaths = deaths
         self.assists = assists
+        self.spell1Id = spell1Id
+        self.spell2Id = spell2Id
+        self.profileIcon = profileIcon
 
 class Team: 
     MAX_TEAM_SIZE = 5

@@ -55,6 +55,10 @@ class RiotApi:
             champion_id = item["championId"]
             champion_name = self.get_champion_name_by_id(champion_id)
 
+            spell1Id = item["spell1Id"]
+            spell2Id = item["spell2Id"]
+            profileIcon = match_dict["participantIdentities"][index]["player"]["profileIcon"]
+
             stats_obj = item["stats"]
             kills = stats_obj["kills"]
             deaths = stats_obj["deaths"]
@@ -62,7 +66,7 @@ class RiotApi:
 
             team_id = item["teamId"]
             
-            current_player = Player(summoner_name, champion_id, champion_name, kills, deaths, assists)
+            current_player = Player(summoner_name, champion_id, champion_name, kills, deaths, assists, spell1Id, spell2Id, profileIcon)
             if (team_id == Team.BLUE_TEAM_ID):
                 blue_team.add_player(current_player)
             else:
@@ -131,9 +135,14 @@ class RiotApi:
             summoner_name = item["summonerName"]
             champion_id = item["championId"]
             champion_name = self.get_champion_name_by_id(champion_id)
+
+            spell1Id = item["spell1Id"]
+            spell2Id = item["spell2Id"]
+            profileIcon = item["profileIconId"]
+
             team_id = item["teamId"]
 
-            current_player = Player(summoner_name, champion_id, champion_name)
+            current_player = Player(summoner_name, champion_id, champion_name, spell1Id=spell1Id, spell2Id=spell2Id, profileIcon=profileIcon)
             if (team_id == Team.BLUE_TEAM_ID):
                 blue_team.add_player(current_player)
             else:
