@@ -22,6 +22,7 @@ class RiotApi:
     def __init__(self, api_key):
         self.lol_watcher = LolWatcher(api_key)
         self.champion_id_mapping = self.get_champion_id_to_name_mapping()
+        self.summoner_spell_id_mapping = self.get_summoner_spell_id_to_name_mapping()
 
     # Ex. 1 -> Annie
     def get_champion_id_to_name_mapping(self):
@@ -37,6 +38,20 @@ class RiotApi:
     def get_champion_name_by_id(self, champion_id):
         # should almost never hit else case except if playing a brand new champion and data dragon hasn't been updated yet
         return self.champion_id_mapping[champion_id] if champion_id in self.champion_id_mapping else "NA"
+
+    def get_summoner_spell_id_to_name_mapping(self):
+        versions = self.lol_watcher.data_dragon.versions_for_region(RiotApi.MY_REGION)
+        summoner_spells_version = versions['n']['summoner']
+
+        # get some summoner spells
+        current_spells_dict = self.lol_watcher.data_dragon.summoner_spells(summoner_spells_version)["data"]
+
+        clean_spells_dict = {int(value["key"]):{"name": value["name"], "image": value["image"]} for key, value in current_spells_dict.items()}
+        return (clean_spells_dict)
+
+    def get_summoner_spell_by_id(self, spell_id):
+        # should almost never hit else case except if playing a brand new champion and data dragon hasn't been updated yet
+        return self.summoner_spell_id_mapping[spell_id]["name"] if spell_id in self.summoner_spell_id_mapping else "NA"
 
     # returns summoner info json object that contains name and all the ids, etc.
     # more details here: https://developer.riotgames.com/apis#summoner-v4/GET_getBySummonerName

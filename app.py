@@ -27,7 +27,8 @@ def hello_world_test():
 @cross_origin()
 def get_live_match():
     summoner_name = request.args.get("summonerName")
-    return riot_api.get_live_match_api(summoner_name)
+    return riot_api.get_summoner_spell_by_id(1)
+    # return riot_api.get_live_match_api(summoner_name)
 
 @app.route('/my-summoner', methods=['GET'])
 @cross_origin()
