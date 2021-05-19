@@ -67,7 +67,11 @@ class RiotApi:
     # returns summoner info json object that contains name and all the ids, etc.
     # more details here: https://developer.riotgames.com/apis#summoner-v4/GET_getBySummonerName
     def get_summoner_info(self, summoner_name):
-        return self.lol_watcher.summoner.by_name(RiotApi.MY_REGION, summoner_name)
+        try:
+            summoner = self.lol_watcher.summoner.by_name(RiotApi.MY_REGION, summoner_name)
+            return summoner
+        except ApiError as err:
+            return err.response.json()
 
     # returns Match object from models.py for a specific match
     def process_match_info(self, match_dict):
@@ -140,9 +144,39 @@ class RiotApi:
         # construct new dictionary with previous matches + new matches
         self.write_list_of_matches_from_file(latest_matches)
 
+    def batch_update_list_of_matches(self, summoner_name):
+        summoner = self.get_summoner_info(summoner_name)  
+        previous_matches_json = self.read_list_of_matches_from_file()
+        previous_matches_array = previous_matches_json["matches"]
+        list_of_previous_match_ids = [x["gameId"] for x in previous_matches_array]
+
+        for i in range(10):
+            begin_index = 75 * i
+            end_index = 75 * (i + 1)
+
+            matches = self.lol_watcher.match.matchlist_by_account(
+                RiotApi.MY_REGION, summoner["accountId"],
+                queue = [RiotApi.ARAM_QUEUE_ID],
+                begin_index = begin_index,
+                end_index = end_index
+            )
+
+            # get only new matches that we haven't included yet
+            new_matches = [x for x in matches["matches"] if x["gameId"] not in list_of_previous_match_ids]
+            for match in new_matches:
+                previous_matches_array.append(self.lol_watcher.match.by_id(RiotApi.MY_REGION, match["gameId"]))
+
+            latest_matches = {"matches": previous_matches_array}
+            # construct new dictionary with previous matches + new matches
+            self.write_list_of_matches_from_file(latest_matches)
+
+            print(i)
+
+            time.sleep(130)
+
     # return live match json object from riot api: https://developer.riotgames.com/apis#spectator-v4/GET_getCurrentGameInfoBySummoner
     def get_live_match(self, summoner_name):
-        summoner = self.get_summoner_info(summoner_name)  
+        summoner = self.get_summoner_info(summoner_name)
         match = self.lol_watcher.spectator.by_summoner(RiotApi.MY_REGION, summoner["id"])
 
         return match
@@ -196,6 +230,9 @@ class RiotApi:
         
         # get only matches where player is in the game
         filtered_matches_list = [match for match in processed_matches_list if match.is_player_in_match(summoner_name)]
+        if (len(filtered_matches_list) <= 0):
+            return {}, 404
+
         data = pd.DataFrame([match.get_model_dict(summoner_name) for match in filtered_matches_list])
         list_of_dicts = []
         for row in data.itertuples():
@@ -224,7 +261,7 @@ class RiotApi:
         x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.8)
 
         # This takes a while to train the mode. Around ~
-        model=CatBoostClassifier(iterations=1000, eval_metric="AUC", loss_function="Logloss", task_type="GPU", allow_writing_files=False)
+        model=CatBoostClassifier(iterations=400, eval_metric="AUC", loss_function="Logloss", task_type="GPU", allow_writing_files=False)
         model.fit(x_train, y_train,cat_features=feature_columns, eval_set=(x_test, y_test), verbose = 200, use_best_model=True)
 
         y_pred = model.predict(x_test)
