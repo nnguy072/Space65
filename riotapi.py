@@ -21,7 +21,18 @@ class RiotApi:
 
     def __init__(self, api_key):
         self.lol_watcher = LolWatcher(api_key)
-        self.champion_id_mapping = self.get_champion_id_to_name_mapping()
+        
+        champion_data_tup = self.get_champion_id_to_name_mapping()
+        self.current_champion_version = champion_data_tup[0]
+        self.champion_id_mapping = champion_data_tup[1]
+        self.champion_square_assets_base_link = f"https://ddragon.leagueoflegends.com/cdn/{self.current_champion_version}/img/champion/"
+        
+        summoner_spell_data_tup = self.get_summoner_spell_id_to_name_mapping()
+        self.current_summoner_spell_version = summoner_spell_data_tup[0]
+        self.summoner_spell_id_mapping = summoner_spell_data_tup[1]
+        self.summoner_spell_assets_base_link = f"https://ddragon.leagueoflegends.com/cdn/{self.current_summoner_spell_version}/img/spell/"
+
+        self.profile_icon_assets_base_link = f"https://ddragon.leagueoflegends.com/cdn/{self.current_champion_version}/img/profileicon/"
 
     # Ex. 1 -> Annie
     def get_champion_id_to_name_mapping(self):
@@ -32,16 +43,35 @@ class RiotApi:
         current_champ_dict = self.lol_watcher.data_dragon.champions(champions_version)["data"]
 
         clean_champ_dict = {int(value["key"]):key for key, value in current_champ_dict.items()}
-        return(clean_champ_dict)
+        return(champions_version, clean_champ_dict)
 
     def get_champion_name_by_id(self, champion_id):
         # should almost never hit else case except if playing a brand new champion and data dragon hasn't been updated yet
         return self.champion_id_mapping[champion_id] if champion_id in self.champion_id_mapping else "NA"
 
+    def get_summoner_spell_id_to_name_mapping(self):
+        versions = self.lol_watcher.data_dragon.versions_for_region(RiotApi.MY_REGION)
+        summoner_spells_version = versions['n']['summoner']
+
+        # get some summoner spells
+        current_spells_dict = self.lol_watcher.data_dragon.summoner_spells(summoner_spells_version)["data"]
+
+        clean_spells_dict = {int(value["key"]):{"name": value["name"], "image": value["image"]} for key, value in current_spells_dict.items()}
+        # return (clean_spells_dict)
+        return (summoner_spells_version, clean_spells_dict)
+
+    def get_summoner_spell_by_id(self, spell_id):
+        # should almost never hit else case except if playing on a brand new version and data dragon hasn't been updated yet
+        return {"name": self.summoner_spell_id_mapping[spell_id]["name"], "asset": self.summoner_spell_id_mapping[spell_id]["image"]["full"]} if spell_id in self.summoner_spell_id_mapping else "NA"
+
     # returns summoner info json object that contains name and all the ids, etc.
     # more details here: https://developer.riotgames.com/apis#summoner-v4/GET_getBySummonerName
     def get_summoner_info(self, summoner_name):
-        return self.lol_watcher.summoner.by_name(RiotApi.MY_REGION, summoner_name)
+        try:
+            summoner = self.lol_watcher.summoner.by_name(RiotApi.MY_REGION, summoner_name)
+            return summoner
+        except ApiError as err:
+            return err.response.json()
 
     # returns Match object from models.py for a specific match
     def process_match_info(self, match_dict):
@@ -55,9 +85,11 @@ class RiotApi:
             champion_id = item["championId"]
             champion_name = self.get_champion_name_by_id(champion_id)
 
-            spell1Id = item["spell1Id"]
-            spell2Id = item["spell2Id"]
-            profileIcon = match_dict["participantIdentities"][index]["player"]["profileIcon"]
+            spell_1_id = item["spell1Id"]
+            spell_1_name = self.get_summoner_spell_by_id(spell_1_id)
+            spell_2_id = item["spell2Id"]
+            spell_2_name = self.get_summoner_spell_by_id(spell_2_id)
+            profile_icon = match_dict["participantIdentities"][index]["player"]["profileIcon"]
 
             stats_obj = item["stats"]
             kills = stats_obj["kills"]
@@ -66,7 +98,7 @@ class RiotApi:
 
             team_id = item["teamId"]
             
-            current_player = Player(summoner_name, champion_id, champion_name, kills, deaths, assists, spell1Id, spell2Id, profileIcon)
+            current_player = Player(summoner_name, champion_id, champion_name, kills, deaths, assists, spell_1_id, spell_1_name, spell_2_id, spell_2_name, profile_icon)
             if (team_id == Team.BLUE_TEAM_ID):
                 blue_team.add_player(current_player)
             else:
@@ -112,9 +144,39 @@ class RiotApi:
         # construct new dictionary with previous matches + new matches
         self.write_list_of_matches_from_file(latest_matches)
 
+    def batch_update_list_of_matches(self, summoner_name):
+        summoner = self.get_summoner_info(summoner_name)  
+        previous_matches_json = self.read_list_of_matches_from_file()
+        previous_matches_array = previous_matches_json["matches"]
+        list_of_previous_match_ids = [x["gameId"] for x in previous_matches_array]
+
+        for i in range(10):
+            begin_index = 75 * i
+            end_index = 75 * (i + 1)
+
+            matches = self.lol_watcher.match.matchlist_by_account(
+                RiotApi.MY_REGION, summoner["accountId"],
+                queue = [RiotApi.ARAM_QUEUE_ID],
+                begin_index = begin_index,
+                end_index = end_index
+            )
+
+            # get only new matches that we haven't included yet
+            new_matches = [x for x in matches["matches"] if x["gameId"] not in list_of_previous_match_ids]
+            for match in new_matches:
+                previous_matches_array.append(self.lol_watcher.match.by_id(RiotApi.MY_REGION, match["gameId"]))
+
+            latest_matches = {"matches": previous_matches_array}
+            # construct new dictionary with previous matches + new matches
+            self.write_list_of_matches_from_file(latest_matches)
+
+            print(i)
+
+            time.sleep(130)
+
     # return live match json object from riot api: https://developer.riotgames.com/apis#spectator-v4/GET_getCurrentGameInfoBySummoner
     def get_live_match(self, summoner_name):
-        summoner = self.get_summoner_info(summoner_name)  
+        summoner = self.get_summoner_info(summoner_name)
         match = self.lol_watcher.spectator.by_summoner(RiotApi.MY_REGION, summoner["id"])
 
         return match
@@ -131,18 +193,22 @@ class RiotApi:
         blue_team = Team(Team.BLUE_TEAM_ID)
         red_team = Team(Team.RED_TEAM_ID)
 
-        for index, item in enumerate(match["participants"]):
+        for item in match["participants"]:
             summoner_name = item["summonerName"]
             champion_id = item["championId"]
             champion_name = self.get_champion_name_by_id(champion_id)
 
-            spell1Id = item["spell1Id"]
-            spell2Id = item["spell2Id"]
-            profileIcon = item["profileIconId"]
+            spell_1_id = item["spell1Id"]
+            spell_1_name = self.get_summoner_spell_by_id(spell_1_id)
+            spell_2_id = item["spell2Id"]
+            spell_2_name = self.get_summoner_spell_by_id(spell_2_id)
+            profile_icon = item["profileIconId"]
 
             team_id = item["teamId"]
 
-            current_player = Player(summoner_name, champion_id, champion_name, spell1Id=spell1Id, spell2Id=spell2Id, profileIcon=profileIcon)
+            current_player = Player(summoner_name, champion_id, champion_name, 
+                    spell_1_id=spell_1_id, spell_1_name=spell_1_name, spell_2_id=spell_2_id,
+                    spell_2_name=spell_2_name, profile_icon=profile_icon)
             if (team_id == Team.BLUE_TEAM_ID):
                 blue_team.add_player(current_player)
             else:
@@ -153,16 +219,21 @@ class RiotApi:
 
     def get_live_match_api(self, summoner_name):
         processed_live_match = self.process_live_match(self.get_live_match(summoner_name))
-        return processed_live_match.get_dict_v2(summoner_name)
+        return processed_live_match.get_live_match_dict(summoner_name,
+            {"champion": self.champion_square_assets_base_link, "summoner_spell": self.summoner_spell_assets_base_link, "profile_icon": self.profile_icon_assets_base_link}
+        )
 
-    # currently placeholder
-    def calculate_percentage_of_winning(self, summoner_name):
+    # will return whether you will win or not (details depend on what model we use)
+    def get_win_prediction(self, summoner_name):
         previous_matches_list = self.read_list_of_matches_from_file()
         processed_matches_list = [self.process_match_info(match) for match in previous_matches_list["matches"]]
         
         # get only matches where player is in the game
         filtered_matches_list = [match for match in processed_matches_list if match.is_player_in_match(summoner_name)]
-        data = pd.DataFrame([match.get_dict(summoner_name) for match in filtered_matches_list])
+        if (len(filtered_matches_list) <= 0):
+            return {}, 404
+
+        data = pd.DataFrame([match.get_model_dict(summoner_name) for match in filtered_matches_list])
         list_of_dicts = []
         for row in data.itertuples():
             values = row[4:]
@@ -190,12 +261,8 @@ class RiotApi:
         x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.8)
 
         # This takes a while to train the mode. Around ~
-        model=CatBoostClassifier(iterations=1000, eval_metric="AUC", loss_function="Logloss", task_type="GPU", allow_writing_files=False)
+        model=CatBoostClassifier(iterations=400, eval_metric="AUC", loss_function="Logloss", task_type="GPU", allow_writing_files=False)
         model.fit(x_train, y_train,cat_features=feature_columns, eval_set=(x_test, y_test), verbose = 200, use_best_model=True)
 
         y_pred = model.predict(x_test)
         return {"accuracy": metrics.accuracy_score(y_test, y_pred)}
-
-    # will return whether you will win or not (details depend on what model we use)
-    def get_win_prediction(self, summoner_name):
-        return self.calculate_percentage_of_winning(summoner_name)

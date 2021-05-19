@@ -18,21 +18,42 @@ def hello_world():
 
 @app.route('/update', methods=['POST'])
 @cross_origin()
-def hello_world_test():
+def update():
     summoner_name = request.args.get("summonerName")
-    riot_api.update_list_of_matches(summoner_name, begin_index = 0, end_index = 50)
+    summoner = riot_api.get_summoner_info(summoner_name)
+    if "status" in summoner:
+        return {}, summoner["status"]["status_code"]
+    riot_api.update_list_of_matches(summoner["name"], begin_index = 0, end_index = 50)
+    return {}, 200
+
+@app.route('/batch-update', methods=['POST'])
+@cross_origin()
+def batch_update():
+    summoner_name = request.args.get("summonerName")
+    summoner = riot_api.get_summoner_info(summoner_name)
+    if "status" in summoner:
+        return {}, summoner["status"]["status_code"]
+    riot_api.batch_update_list_of_matches(summoner["name"])
     return {}, 200
 
 @app.route('/live-match', methods=['GET'])
 @cross_origin()
 def get_live_match():
     summoner_name = request.args.get("summonerName")
-    return riot_api.get_live_match_api(summoner_name)
+    summoner = riot_api.get_summoner_info(summoner_name)
+    if "status" in summoner:
+        return {}, summoner["status"]["status_code"]
+        
+    return riot_api.get_live_match_api(summoner["name"])
 
 @app.route('/my-summoner', methods=['GET'])
 @cross_origin()
 def get_win_prediction():
     summoner_name = request.args.get("summonerName")
-    return riot_api.get_win_prediction(summoner_name)
+        
+    summoner = riot_api.get_summoner_info(summoner_name)
+    if "status" in summoner:
+        return {}, summoner["status"]["status_code"]
+    return riot_api.get_win_prediction(summoner["name"])
     
 
