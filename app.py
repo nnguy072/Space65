@@ -24,7 +24,7 @@ def update():
     if "status" in summoner:
         return {}, summoner["status"]["status_code"]
     riot_api.update_list_of_matches(summoner["name"], begin_index = 0, end_index = 50)
-    return {}, 200
+    return {}, 204
 
 @app.route('/batch-update', methods=['POST'])
 @cross_origin()
@@ -34,7 +34,7 @@ def batch_update():
     if "status" in summoner:
         return {}, summoner["status"]["status_code"]
     riot_api.batch_update_list_of_matches(summoner["name"])
-    return {}, 200
+    return {}, 204
 
 @app.route('/live-match', methods=['GET'])
 @cross_origin()
@@ -43,8 +43,7 @@ def get_live_match():
     summoner = riot_api.get_summoner_info(summoner_name)
     if "status" in summoner:
         return {}, summoner["status"]["status_code"]
-        
-    return riot_api.get_live_match_api(summoner["name"])
+    return riot_api.get_live_match_api(summoner["name"]), 200
 
 @app.route('/my-summoner', methods=['GET'])
 @cross_origin()
