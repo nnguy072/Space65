@@ -252,17 +252,23 @@ class RiotApi:
 
         data = pd.DataFrame(list_of_dicts)
 
-        feature_columns = [col for col in data.columns if "ally" in col if "summoner" not in col]
+        feature_columns = [col for col in data.columns if "ally" in col if "champion" in col]
         label_columns = ["winner"]
 
         x = data[feature_columns]
         y = data[label_columns]
 
         x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.8)
-
         # This takes a while to train the mode. Around ~
         model=CatBoostClassifier(iterations=400, eval_metric="AUC", loss_function="Logloss", task_type="GPU", allow_writing_files=False)
-        model.fit(x_train, y_train,cat_features=feature_columns, eval_set=(x_test, y_test), verbose = 200, use_best_model=True)
+        model.fit(x_train, y_train, cat_features=feature_columns, eval_set=(x_test, y_test), verbose = 200, use_best_model=True)
 
-        y_pred = model.predict(x_test)
-        return {"accuracy": metrics.accuracy_score(y_test, y_pred)}
+        y_pred_test = model.predict(x_test)
+
+        live_match = self.get_live_match(summoner_name)
+        processed_live_match = self.process_live_match(live_match)
+        live_match_pd = pd.DataFrame([processed_live_match.get_model_dict(summoner_name)])
+        pred_data = live_match_pd[feature_columns]
+        y_pred = model.predict(pred_data)
+
+        return {"accuracy": metrics.accuracy_score(y_test, y_pred_test), "result": str(y_pred[0])}
