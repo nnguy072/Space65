@@ -56,3 +56,5 @@ def get_win_prediction():
     return riot_api.get_win_prediction(summoner["name"])
     
 
+if __name__ == "__main":
+    app.run()
