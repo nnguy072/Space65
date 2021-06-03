@@ -2,14 +2,16 @@ from flask import Flask, Response, request, jsonify
 from flask_cors import CORS, cross_origin
 
 import sys
+import os
 from riotapi import RiotApi
 
 app = Flask(__name__, instance_relative_config=True)
-app.config.from_pyfile('config.py')
+# app.config.from_pyfile('config.py')
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
-riot_api = RiotApi(app.config["RIOT_API_KEY"])
+#riot_api = RiotApi(app.config["RIOT_API_KEY"])
+riot_api = RiotApi(os.environ.get("RIOT_API_KEY"))
 
 @app.route('/')
 @cross_origin()
