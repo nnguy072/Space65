@@ -14,7 +14,7 @@ riot_api = RiotApi(app.config["RIOT_API_KEY"])
 @app.route('/')
 @cross_origin()
 def hello_world():
-    return 'Hello, World!'
+    return "<h1 style='color:blue'>Hello There!</h1>"
 
 @app.route('/update', methods=['POST'])
 @cross_origin()
