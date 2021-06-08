@@ -1,4 +1,4 @@
-from flask import Flask, Response, request, jsonify
+from flask import Flask, redirect, request, jsonify
 from flask_cors import CORS, cross_origin
 
 import sys
@@ -18,7 +18,7 @@ riot_api = RiotApi(os.environ.get("RIOT_API_KEY"))
 @app.route('/')
 @cross_origin()
 def hello_world():
-    return "<h1 style='color:blue'>Hello There!</h1>"
+    return redirect("https://chimera65.azurewebsites.net/home")
 
 @app.route('/api/v1/update', methods=['POST'])
 @cross_origin()
